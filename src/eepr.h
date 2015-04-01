@@ -11,6 +11,9 @@
 #include <avr/io.h>
 #include "types.h"
 
+#define AT25128_MEM_SIZE_BYTE 0x4000
+#define AT25256_MEM_SIZE_BYTE 0x8000
+
 /* Instructions for AT25128A_256A                              */
 #define WREN  0x06 /* Write enable                             */
 #define WRDI  0x04 /* Write disable                            */

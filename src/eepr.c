@@ -46,9 +46,6 @@ static void chipSelect(csState_t state)
     case SPII_CS_HIGH:
         gpio_set(EEPROM_CS_CFG);
         break;
-    default:
-        /* Should not end up here. Do nothing */
-        break;
     }
 }
 

@@ -36,5 +36,6 @@ typedef unsigned long tU32;
 #define BYTES_IN_INT  2
 #define BYTES_IN_LONG 4
 
+#define COUNT(a) (sizeof(a)/(sizeof(a[0])))
 
 #endif /* TYPES_H_ */

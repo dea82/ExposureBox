@@ -11,6 +11,13 @@
 
 typedef unsigned char tB;
 
+typedef enum
+{
+    U08_E,
+    U16_E,
+    U32_E
+} tType_E;
+
 #define  FALSE      0
 #define  TRUE       !FALSE
 

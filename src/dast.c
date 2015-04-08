@@ -36,8 +36,6 @@ typedef const struct
     void *ramMirror_p;
 }PROGMEM tDataElement_str;
 
-static void verifyEeprom(void);
-
 typedef struct
 {
     tU16 starts_U16;
@@ -71,17 +69,17 @@ tCounterElements_str counterRamMirror_str;
 tTimerElements_str timerRamMirror_str;
 tSettingElements_str settingRamMirror_str;
 
-tDast_verificationStatus_E startupCheckStatus_aE[] =
+typedef struct
 {
-/* COUNTERS_E */DAST_UNKNOWN_E,
-/* TIMERS_E   */DAST_UNKNOWN_E,
-/* SETTINGS_E */DAST_UNKNOWN_E };
+    tDast_verificationStatus_E status_E;
+    tDast_verificationSolution_E solution_E;
+} tVerificationStatus_str;
 
-tDast_verificationSolution_E startupCheckSolution_aE[] =
+tVerificationStatus_str verificationStatus_astr[] =
 {
-/* COUNTERS_E */DAST_NONE_E,
-/* TIMERS_E   */DAST_NONE_E,
-/* SETTINGS_E */DAST_NONE_E };
+{/* COUNTERS   */DAST_UNKNOWN_E, DAST_NONE_E },
+{/* TIMERS_E   */DAST_UNKNOWN_E, DAST_NONE_E },
+{/* SETTINGS_E */DAST_UNKNOWN_E, DAST_NONE_E } };
 
 tDataElement_str counterElementsDef_astr[] =
 {
@@ -125,9 +123,25 @@ tDataElement_str settingElementsDef_astr[] =
         &settingRamMirror_str.generalSettings1_U08 },
 {/* CRC CRC CRC CRC CRC CRC CRC CRC   */DAST_U16_E, 0x9,
         &settingRamMirror_str.crc_U16 } };
+typedef const struct
+{
+    tU16 address_U16;
+    tDataElement_str *elements_str;
+}PROGMEM tMemoryBlock_str;
 
-tDataElement_str *memoryBlocks_pastr[] =
-{ counterElementsDef_astr, timerElementsDef_astr, settingElementsDef_astr };
+tMemoryBlock_str memoryBlock_pastr[] =
+{
+{ COUNTER_ADDRESS, counterElementsDef_astr },
+{ TIMER_ADDRESS, timerElementsDef_astr },
+{ SETTINGS_ADDRESS, settingElementsDef_astr } };
+
+static void verifyEeprom(void);
+static tDast_verificationStatus_E readEepromToRam(
+        tMemoryBlock_str memoryBlock_str, tU16 startAddress_U16);
+static tU08 getNofBytes(tDast_Type_E type_E);
+static void updateCrc(tU16 *crc_pU16, tU08 *data_pU08, tDast_Type_E type_E);
+static tVerificationStatus_str verifyMemoryBlock(
+        tMemoryBlock_str memoryBlock_str);
 
 void Dast_init(void)
 {
@@ -136,11 +150,148 @@ void Dast_init(void)
 
 static void verifyEeprom(void)
 {
-    for (tU08 i_U08 = 0; i_U08 < COUNT(memoryBlocks_pastr); i_U08++)
+    for (tU08 i_U08 = 0; i_U08 < COUNT(memoryBlock_pastr); i_U08++)
     {
-        for (tU08 j_U08 = 0; i_U08 < COUNT(memoryBlocks_pastr); j_U08++)
+        verificationStatus_astr[i_U08] = verifyMemoryBlock(
+                memoryBlock_pastr[i_U08]);
+    }
+}
+
+static tVerificationStatus_str verifyMemoryBlock(
+        tMemoryBlock_str memoryBlock_str)
+{
+    /*
+     * 1. Verify that PRI och SEC are equal, write to ram if they are, if not find out which is correct if any.
+     * */
+    tB syncronizedBlock = TRUE;
+    tU16 primaryCrc_U16 = 0xFFFF;
+    tU16 secondaryCrc_U16 = 0xFFFF;
+
+    tU16 primaryAddress_U16;
+    tU16 secondaryAddress_U16;
+
+    for (tU08 i_U08 = 0; i_U08 < COUNT(memoryBlock_str.elements_str); i_U08++)
+    {
+        primaryAddress_U16 = PRIMARY_MEM_ADDRESS + memoryBlock_str.address_U16
+                + memoryBlock_str.elements_str[i_U08].offset_U16;
+        secondaryAddress_U16 = SECONDARY_MEM_ADDRESS
+                + memoryBlock_str.address_U16
+                + memoryBlock_str.elements_str[i_U08].offset_U16;
+        if (i_U08 < (COUNT(memoryBlock_str.elements_str) - 1))
+        {
+
+            switch (memoryBlock_str.elements_str[i_U08].type_E)
+            {
+            case DAST_U08_E:
+                if (Eepr_readByte_U08(primaryAddress_U16)
+                        != Eepr_readByte_U08(secondaryAddress_U16))
+                {
+                    syncronizedBlock = FALSE;
+                }
+                break;
+            case DAST_U16_E:
+                if (Eepr_readInt_U16(primaryAddress_U16)
+                        != Eepr_readInt_U16(secondaryAddress_U16))
+                {
+                    syncronizedBlock = FALSE;
+                }
+                break;
+            case DAST_U32_E:
+                if (Eepr_readLong_U32(primaryAddress_U16)
+                        != Eepr_readLong_U32(secondaryAddress_U16))
+                {
+                    syncronizedBlock = FALSE;
+                }
+                break;
+            }
+        }
+        else
         {
 
         }
+    }
+}
+
+static tDast_verificationStatus_E readEepromToRam(
+        tMemoryBlock_str memoryBlock_str, tU16 startAddress_U16)
+{
+    tU16 crc_U16 = 0xFFFF;
+    tDast_verificationStatus_E verificationStatus_E = DAST_OK_E;
+
+    for (tU08 i_U08 = 0; i_U08 < COUNT(memoryBlock_str.elements_str); i_U08++)
+    {
+        switch (memoryBlock_str.elements_str[i_U08].type_E)
+        {
+        case DAST_U08_E:
+            *(tU08*) memoryBlock_str.elements_str[i_U08].ramMirror_p =
+                    Eepr_readByte_U08(
+                            startAddress_U16
+                                    + memoryBlock_str.elements_str[i_U08].offset_U16);
+            break;
+        case DAST_U16_E:
+            *(tU16*) memoryBlock_str.elements_str[i_U08].ramMirror_p =
+                    Eepr_readInt_U16(
+                            startAddress_U16
+                                    + memoryBlock_str.elements_str[i_U08].offset_U16);
+            break;
+        case DAST_U32_E:
+            *(tU32*) memoryBlock_str.elements_str[i_U08].ramMirror_p =
+                    Eepr_readLong_U32(
+                            startAddress_U16
+                                    + memoryBlock_str.elements_str[i_U08].offset_U16);
+            break;
+        }
+
+        /* Add to CRC if not field are last which is CRC field. */
+        if (i_U08 < (COUNT(memoryBlock_str.elements_str) - 1))
+        {
+            updateCrc(&crc_U16,
+                    (tU08*) memoryBlock_str.elements_str[i_U08].ramMirror_p,
+                    memoryBlock_str.elements_str[i_U08].type_E);
+
+        }
+        else
+        {
+            /* Last element just added to ram mirror, this is the CRC field. Verify
+             * that this value matches the computed. */
+            if (*(tU16*) memoryBlock_str.elements_str[i_U08].ramMirror_p
+                    == crc_U16)
+            {
+                verificationStatus_E = DAST_OK_E;
+            }
+            else
+            {
+                verificationStatus_E = DAST_CORRUPT_E;
+            }
+        }
+    }
+    return verificationStatus_E;
+}
+
+static tU08 getNofBytes(tDast_Type_E type_E)
+{
+    tU08 bytes_U08;
+
+    switch (type_E)
+    {
+    case DAST_U08_E:
+        bytes_U08 = 1;
+        break;
+    case DAST_U16_E:
+        bytes_U08 = 2;
+        break;
+    case DAST_U32_E:
+        bytes_U08 = 4;
+        break;
+    }
+    return bytes_U08;
+}
+
+static void updateCrc(tU16 *crc_pU16, tU08 *data_pU08, tDast_Type_E type_E)
+{
+    tU08 bytes_U08 = getNofBytes(type_E);
+    for (; bytes_U08 > 0; bytes_U08--)
+    {
+        *crc_pU16 = _crc16_update(*crc_pU16, *data_pU08);
     }
 }

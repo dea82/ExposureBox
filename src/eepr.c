@@ -144,7 +144,23 @@ static tB write_B(tU16 address_U16, const void *data_ptr, tU08 bytes_U08)
     return ret_B;
 }
 
-static void read(tU08 *data_ptr, tU16 address_U16, tU08 bytes_U08)
+void Eepr_read(void *data_ptr, const tU16 address_U16, tU08 bytes_U08)
+{
+    chipSelect(SPII_CS_LOW);
+    /* Send read command */
+    Spii_write(READ);
+    /* Send high and low nibble of address */
+    Spii_write(HI_BYTE(address_U16));
+    Spii_write(LO_BYTE(address_U16));
+    /* Get the data at the address */
+    while (bytes_U08--)
+    {
+        *(tU08*) data_ptr++ = Spii_getByte_U08();
+    }
+    chipSelect(SPII_CS_HIGH);
+}
+
+static void read(tU08 *data_ptr, const tU16 address_U16, tU08 bytes_U08)
 {
     chipSelect(SPII_CS_LOW);
     /* Send read command */

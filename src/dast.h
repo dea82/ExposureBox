@@ -50,7 +50,7 @@ typedef const struct
 
 typedef enum
 {
-    DAST_UNKNOWN_E, DAST_PENDING_E, DAST_OK_E, DAST_CORRUPT_E
+    DAST_UNKNOWN_E, DAST_OK_E, DAST_CORRUPT_E
 } tDast_verificationStatus_E;
 
 typedef enum

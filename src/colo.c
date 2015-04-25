@@ -24,6 +24,7 @@
 #include "src-gen/mstm.h"
 #include "src-gen/sc_types.h"
 #include "ledc.h"
+#include "dast.h"
 
 typedef enum
 {
@@ -82,11 +83,11 @@ void Colo_loop(void)
         mstmIface_raise_leftButtonReleased(&handle);
     }
 
-    if (Pomm_getVerificationState_E() == POMM_EEPROM_STATUS_OK_E)
+    if (Dast_getVerificationStatus_E().status_E == DAST_OK_E)
     {
         mstmIface_raise_eepromDataVerifiedOk(&handle);
     }
-    if (Pomm_getVerificationState_E() == POMM_EEPROM_STATUS_CORRUPT_E)
+    if (Dast_getVerificationStatus_E().status_E == DAST_CORRUPT_E)
     {
         mstmIface_raise_eepromDataVerifiedCorrupt(&handle);
     }

@@ -3,7 +3,7 @@ GeneratorModel for yakindu::c {
 	statechart mstm {
 
 		feature Outlet {
-			targetProject = "Boxen"
+			targetProject = "ExposureBox"
 			targetFolder = "src-gen"
 		}
 	}

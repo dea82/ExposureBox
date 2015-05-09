@@ -11,7 +11,7 @@
 #include <avr/io.h>
 
 void Seri_init(void);
-void Seri_writeByte(const uint8_t data);
-void Seri_writeString(const uint8_t *string);
+void Seri_writeByte(const char data);
+void Seri_writeString(const char *string);
 
 #endif /* SERI_H_ */

@@ -27,13 +27,13 @@ void Seri_init(void)
   UCSRC = (1<<URSEL) | (1<<UCSZ1) | (1<<UCSZ0);
 }
 
-void Seri_writeByte(const uint8_t data)
+void Seri_writeByte(const char data)
 {
     while (( UCSRA & (1 << UDRE )) == 0) {}; /* Do nothing until UDR is ready for more data tobe written to it */
     UDR = data;
 }
 
-void Seri_writeString(const uint8_t *string)
+void Seri_writeString(const char *string)
 {
     while(*string)
     {

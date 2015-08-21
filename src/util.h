@@ -23,10 +23,6 @@
 
 typedef uint8_t clock_t[4];
 
-void Util_safeUCharIncrement(unsigned char *c);
-void Util_safeUIntIncrement(unsigned int *c);
-void Util_safeULongIncrement(unsigned long *c);
-
 void Util_concatString(char *original, char *add);
 char* Util_digitToChar(const uint8_t digit);
 

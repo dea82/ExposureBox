@@ -9,30 +9,6 @@
 #include <avr/pgmspace.h>
 #include "util.h"
 
-void Util_safeUCharIncrement(unsigned char *c)
-{
-	if (*c != UCHAR_MAX)
-	{
-		*c = *c + 1;
-	}
-}
-
-void Util_safeUIntIncrement(unsigned int *c)
-{
-	if (*c != UINT_MAX)
-	{
-		*c = *c + 1;
-	}
-}
-
-void Util_safeULongIncrement(unsigned long *c)
-{
-	if (*c != ULONG_MAX)
-	{
-		*c = *c + 1;
-	}
-}
-
 void Util_concatString(char *original, char *add)
 {
    while(*original)

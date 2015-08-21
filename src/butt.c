@@ -14,7 +14,6 @@
 #include "butt.h"
 #include "gpio.h"
 #include "types.h"
-#include "util.h"
 
 #define NOF_BUTTONS 2
 #define BUTT_FILTER_TIME 30       /* [30 ms] */
@@ -68,7 +67,7 @@ static void calcFilter(void)
         if (buttonRawOld_astr[i_U08].state_E == buttonRaw_aE[i_U08])
         {
             /* Still the same value increment counter. */
-            Util_safeUIntIncrement(&buttonRawOld_astr[i_U08].timeInState_U16);
+            INC_U16(buttonRawOld_astr[i_U08].timeInState_U16);
         }
         else
         {
@@ -86,7 +85,7 @@ static void calcFilter(void)
         }
         else
         {
-            Util_safeUIntIncrement(&butt_state_astr[i_U08].timeInState_U16);
+            INC_U16(butt_state_astr[i_U08].timeInState_U16);
         }
 
         /* Remember value until next tick. */
@@ -106,7 +105,7 @@ static void calcState(void)
         if (butt_state_astr[i_U08].state_E == BUTT_PRESSED_E)
         {
             /* Button is pressed, count up the time the button has been pressed. */
-            Util_safeUIntIncrement(&tiPressed_U16[i_U08]);
+            INC_U16(tiPressed_U16[i_U08]);
         }
         else
         {

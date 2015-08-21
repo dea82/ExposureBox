@@ -13,11 +13,6 @@
 
 typedef enum
 {
-    DAST_U08_E, DAST_U16_E, DAST_U32_E
-} tDast_Type_E;
-
-typedef enum
-{
     DAST_STARTS_E,
     DAST_LIGHTS_ACTIVATION_E,
     DAST_USER_ABSENCE_WARNINGS_E,
@@ -45,12 +40,6 @@ typedef enum
     DAST_NOF_SETTINGS_E
 } tDast_Settings_E;
 
-typedef const struct
-{
-    tDast_Type_E type_E;
-    tU16 offset_U16;
-} tDast_BlockStructure_str;
-
 typedef enum
 {
     DAST_UNKNOWN_E, DAST_OK_E, DAST_CORRUPT_E
@@ -58,7 +47,7 @@ typedef enum
 
 typedef enum
 {
-    DAST_NONE_E, DAST_FIXED_E, DAST_LOST_E
+    DAST_NONE_E, DAST_FIXED_E, DAST_LOST_E, DAST_UNFIXED_E
 } tDast_verificationSolution_E;
 
 typedef struct
@@ -68,8 +57,6 @@ typedef struct
 } tVerificationStatus_str;
 
 void Dast_init(void);
-tDast_BlockStructure_str *Stat_getCounterStructure_pstr(void);
-tDast_BlockStructure_str *Stat_getTimerStructure_pstr(void);
 tVerificationStatus_str Dast_getVerificationStatus_E(void);
 
 #endif /* DAST_H_ */

@@ -24,8 +24,6 @@ typedef enum
 #define ON  TRUE
 #define OFF FALSE
 
-#define NULL 0
-
 typedef unsigned char tU08;
 typedef char tS08;
 

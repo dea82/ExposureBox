@@ -16,6 +16,7 @@
 #include <avr/io.h>
 #include "spii.h"
 #include "seri.h"
+#include <stdio.h>
 
 static void chipSelect(csState_t state);
 static tU08 readStatusRegister_U08(void);
@@ -47,6 +48,27 @@ static void chipSelect(csState_t state)
         gpio_set(EEPROM_CS_CFG);
         break;
     }
+}
+
+tB Eepr_write_B(tU08 *data_paU08, tU16 address_U16, tU08 size_U08)
+{
+    char buffer[20] = "";
+
+    tB ret_B = write_B(address_U16, data_paU08, size_U08);
+
+    for (tU08 i_U08 = 0; i_U08 < size_U08; i_U08++)
+    {
+        sprintf(buffer,"Data: %i\n", data_paU08[i_U08]);
+        Seri_writeString(buffer);
+        ret_B &= (data_paU08[i_U08] == Eepr_readByte_U08(address_U16 + i_U08));
+        sprintf(buffer,"Read: %i\n", Eepr_readByte_U08(address_U16 + i_U08));
+        Seri_writeString(buffer);
+        if (ret_B)
+        {
+
+        }
+    }
+    return ret_B;
 }
 
 /*! \brief Writes a single bit in the eeprom at the given address.
@@ -130,11 +152,11 @@ static tB write_B(tU16 address_U16, const void *data_ptr, tU08 bytes_U08)
         /* Data to be written */
         while (bytes_U08--)
         {
-            Spii_write(*(tU08*) (data_ptr));
-
+            Spii_write(*(tU08*) (data_ptr++));
         }
 
         chipSelect(SPII_CS_HIGH);
+        ret_B = TRUE;
     }
     else
     {

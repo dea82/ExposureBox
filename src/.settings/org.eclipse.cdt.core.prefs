@@ -1,4 +1,13 @@
 eclipse.preferences.version=1
+environment/project/de.innot.avreclipse.configuration.app.debug.254340601/append=true
+environment/project/de.innot.avreclipse.configuration.app.debug.254340601/appendContributed=true
+environment/project/de.innot.avreclipse.configuration.app.release.892288238.798439707/DEBUG/delimiter=\:
+environment/project/de.innot.avreclipse.configuration.app.release.892288238.798439707/DEBUG/operation=append
+environment/project/de.innot.avreclipse.configuration.app.release.892288238.798439707/DEBUG/value=0
+environment/project/de.innot.avreclipse.configuration.app.release.892288238.798439707/append=true
+environment/project/de.innot.avreclipse.configuration.app.release.892288238.798439707/appendContributed=true
+environment/project/de.innot.avreclipse.configuration.app.release.892288238/append=true
+environment/project/de.innot.avreclipse.configuration.app.release.892288238/appendContributed=true
 org.eclipse.cdt.core.formatter.alignment_for_arguments_in_method_invocation=16
 org.eclipse.cdt.core.formatter.alignment_for_assignment=16
 org.eclipse.cdt.core.formatter.alignment_for_base_clause_in_type_declaration=80

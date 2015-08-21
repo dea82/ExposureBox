@@ -70,9 +70,10 @@ void Sche_init(void)
     initTimers();
 }
 
-/* Called every 100us */
+/* Called every 100us @ 16Mhz */
 ISR(TIMER0_OVF_vect)
 {
+    //TODO: Examine assembly code and compensate for that, remember a couple of clock cycles to reach ISR.
     TCNT0 = 0x38;
 
     /* Tick generated every 1ms*/

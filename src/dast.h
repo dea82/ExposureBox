@@ -47,7 +47,7 @@ typedef enum
 
 typedef enum
 {
-    DAST_NONE_E, DAST_FIXED_E, DAST_LOST_E, DAST_UNFIXED_E
+    DAST_NONE_E, DAST_FIXED_E, DAST_PARTIALLY_LOST_E, DAST_LOST_E, DAST_UNFIXED_E
 } tDast_verificationSolution_E;
 
 typedef struct

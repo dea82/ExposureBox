@@ -39,6 +39,11 @@ typedef enum
     COUNTERS_E, TIMERS_E, SETTINGS_E
 } tStorageType_E;
 
+typedef enum
+{
+    PRIMARY_TO_SECONDARY_E, SECONDARY_TO_PRIMARY_E
+} tCopyDirection_E;
+
 typedef const struct
 {
     tU08 bytes_U08;
@@ -156,6 +161,8 @@ static tVerificationStatus_str verifyMemoryBlock(
         tMemoryBlock_str memoryBlock_str);
 static tDast_verificationSolution_E clearMemoryBlock_E(
         tMemoryBlock_str memoryBlock_str);
+static tDast_verificationSolution_E copyMemoryBlock_E(
+        tMemoryBlock_str memoryBlock_str, tCopyDirection_E direction_E);
 static tB syncronizedData_B(tU08 *priData_pU08, tU08 *secData_pU08,
         tU08 bytes_U08);
 static tB verifyCrc(tU08 priData_pU08[], tU16 crc_U16);
@@ -181,8 +188,6 @@ static void verifyEeprom(void)
 static tVerificationStatus_str verifyMemoryBlock(
         tMemoryBlock_str memoryBlock_str)
 {
-    //char text[20];
-
     tB syncronizedBlock_B = TRUE;
 
     tVerificationStatus_str verificationStatus_str =
@@ -221,7 +226,7 @@ static tVerificationStatus_str verifyMemoryBlock(
         }
         else
         {
-            /* CRC */
+            /* CRC element */
             if (verifyCrc(priDataBuffer_paU08, priCrc_U16)
                     && verifyCrc(secDataBuffer_paU08, secCrc_U16)
                     && syncronizedBlock_B)
@@ -257,7 +262,7 @@ static tDast_verificationSolution_E clearMemoryBlock_E(
         tMemoryBlock_str memoryBlock_str)
 {
 
-    tDast_verificationSolution_E solution_E;
+    tDast_verificationSolution_E solution_E = DAST_LOST_E;
     tU16 crc_U16 = 0xFFFF;
     tB cleared_B = TRUE;
     tU08 buffer_aU08[BYTES_MAX] =
@@ -312,9 +317,57 @@ static tDast_verificationSolution_E clearMemoryBlock_E(
 
     }
 
-    if (cleared_B == TRUE)
+    if (cleared_B != TRUE)
     {
-        solution_E = DAST_LOST_E;
+        solution_E = DAST_UNFIXED_E;
+    }
+
+    return solution_E;
+}
+
+static tDast_verificationSolution_E copyMemoryBlock_E(
+        tMemoryBlock_str memoryBlock_str, tCopyDirection_E direction_E)
+{
+    tDast_verificationSolution_E solution_E;
+    tU16 sourceAddress_U16;
+    tU16 destinationAddress_U16;
+    tU08 buffer_aU08[BYTES_MAX];
+    tB copied_B = TRUE;
+
+    if (direction_E == PRIMARY_TO_SECONDARY_E)
+    {
+        sourceAddress_U16 = PRIMARY_MEM_ADDRESS;
+        destinationAddress_U16 = SECONDARY_MEM_ADDRESS;
+    }
+    else
+    {
+        sourceAddress_U16 = SECONDARY_MEM_ADDRESS;
+        destinationAddress_U16 = PRIMARY_MEM_ADDRESS;
+    }
+
+    for (tU08 i_U08 = 0; i_U08 < memoryBlock_str.nofElements_U08; i_U08++)
+    {
+        Eepr_read(buffer_aU08,
+                sourceAddress_U16 + memoryBlock_str.address_U16
+                        + memoryBlock_str.elements_str[i_U08].offset_U16,
+                memoryBlock_str.elements_str[i_U08].bytes_U08);
+        copied_B &= Eepr_write_B(buffer_aU08,
+                destinationAddress_U16 + memoryBlock_str.address_U16
+                        + memoryBlock_str.elements_str[i_U08].offset_U16,
+                memoryBlock_str.elements_str[i_U08].bytes_U08);
+
+    }
+
+    if (copied_B == TRUE)
+    {
+        if (direction_E == PRIMARY_TO_SECONDARY_E)
+        {
+            solution_E = DAST_FIXED_E;
+        }
+        else
+        {
+            solution_E = DAST_PARTIALLY_LOST_E;
+        }
     }
     else
     {
@@ -347,7 +400,7 @@ static tB syncronizedData_B(tU08 *priData_pU08, tU08 *secData_pU08,
 
 static void updateCrc(tU16 *crc_pU16, tU08 *data_pU08, tU08 bytes_U08)
 {
-    for (; bytes_U08 > 0; bytes_U08--)
+    while (bytes_U08--)
     {
         *crc_pU16 = _crc16_update(*crc_pU16, *data_pU08);
     }

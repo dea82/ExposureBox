@@ -23,13 +23,20 @@
 
 //static tBUTT_STATE_E         butt_buttonFilterRaw[NOF_BUTTONS];
 static tBUTT_STATE_EXTENDED_E butt_stateExtended_aE[NOF_BUTTONS];
-static tBUTT_STATE_STR        butt_state_astr[NOF_BUTTONS];
+static tBUTT_STATE_STR butt_state_astr[NOF_BUTTONS];
 
 static void calcFilter(void);
 static void calcState(void);
 
-tBUTT_STATE_E Butt_getButtonState_E(const tBUTT_BUTTON_E button_E) { return butt_state_astr[button_E].state_E; }
-tBUTT_STATE_EXTENDED_E Butt_getButtonStateExtended_E(const tBUTT_BUTTON_E button_E) { return butt_stateExtended_aE[button_E]; }
+tBUTT_STATE_E Butt_getButtonState_E(const tBUTT_BUTTON_E button_E)
+{
+    return butt_state_astr[button_E].state_E;
+}
+tBUTT_STATE_EXTENDED_E Butt_getButtonStateExtended_E(
+        const tBUTT_BUTTON_E button_E)
+{
+    return butt_stateExtended_aE[button_E];
+}
 
 void Butt_init(void)
 {
@@ -49,11 +56,13 @@ static void calcFilter(void)
     tBUTT_STATE_E buttonRaw_aE[NOF_BUTTONS];
 
     /* Invert the digital state and shift the bit to LSB position */
-    buttonRaw_aE[BUTT_LEFT_E]  = (gpio_tst(LEFT_BUTTON_CFG) ? BUTT_RELEASED_E : BUTT_PRESSED_E);
-    buttonRaw_aE[BUTT_RIGHT_E] = (gpio_tst(RIGHT_BUTTON_CFG) ? BUTT_RELEASED_E : BUTT_PRESSED_E);
+    buttonRaw_aE[BUTT_LEFT_E] = (
+            gpio_tst(LEFT_BUTTON_CFG) ? BUTT_RELEASED_E : BUTT_PRESSED_E);
+    buttonRaw_aE[BUTT_RIGHT_E] = (
+            gpio_tst(RIGHT_BUTTON_CFG) ? BUTT_RELEASED_E : BUTT_PRESSED_E);
 
     tU08 i_U08;
-    for( i_U08 = 0; i_U08 < NOF_BUTTONS; i_U08++)
+    for (i_U08 = 0; i_U08 < NOF_BUTTONS; i_U08++)
     {
         /* Check if the raw button value is still the same. */
         if (buttonRawOld_astr[i_U08].state_E == buttonRaw_aE[i_U08])
@@ -67,22 +76,17 @@ static void calcFilter(void)
             buttonRawOld_astr[i_U08].timeInState_U16 = 0;
         }
 
-        /* Check if the raw value is stable */
-        if (buttonRawOld_astr[i_U08].timeInState_U16 >= (BUTT_FILTER_TIME/BUTT_T))
+        /* Check if the raw value is stable and different. */
+        if ((buttonRawOld_astr[i_U08].timeInState_U16
+                >= (BUTT_FILTER_TIME / BUTT_T))
+                && (butt_state_astr[i_U08].state_E != buttonRaw_aE[i_U08]))
         {
-            /* Stable value update filtered value */
-
-            /* Same value as before, update time in state. */
-            if(butt_state_astr[i_U08].state_E == buttonRaw_aE[i_U08])
-            {
-                butt_state_astr[i_U08].timeInState_U16++;
-            }
-            else
-            {
-                butt_state_astr[i_U08].timeInState_U16 = 0;
-            }
-
             butt_state_astr[i_U08].state_E = buttonRaw_aE[i_U08];
+            butt_state_astr[i_U08].timeInState_U16 = 0;
+        }
+        else
+        {
+            Util_safeUIntIncrement(&butt_state_astr[i_U08].timeInState_U16);
         }
 
         /* Remember value until next tick. */
@@ -97,7 +101,7 @@ static void calcState(void)
 
     /* Loop through the buttons and update states of them. */
     tU08 i_U08;
-    for ( i_U08 = 0; i_U08 < NOF_BUTTONS; i_U08++)
+    for (i_U08 = 0; i_U08 < NOF_BUTTONS; i_U08++)
     {
         if (butt_state_astr[i_U08].state_E == BUTT_PRESSED_E)
         {
@@ -113,7 +117,8 @@ static void calcState(void)
         switch (butt_stateExtended_aE[i_U08])
         {
         case BUTT_STATE_EXT_RELEASED:
-            if ((tiPressed_U16[i_U08] >= BUTT_PRESS_TIME/BUTT_T) && (butt_state_astr[i_U08].state_E == BUTT_PRESSED_E))
+            if ((tiPressed_U16[i_U08] >= BUTT_PRESS_TIME / BUTT_T)
+                    && (butt_state_astr[i_U08].state_E == BUTT_PRESSED_E))
             {
                 butt_stateExtended_aE[i_U08] = BUTT_STATE_EXT_PRESS_FLANK_E;
             }
@@ -135,9 +140,10 @@ static void calcState(void)
             }
             else
             {
-                if (tiPressed_U16[i_U08] >= BUTT_LONG_PRESS_TIME/BUTT_T)
+                if (tiPressed_U16[i_U08] >= BUTT_LONG_PRESS_TIME / BUTT_T)
                 {
-                    butt_stateExtended_aE[i_U08] = BUTT_STATE_EXT_LONG_PRESS_FLANK_E;
+                    butt_stateExtended_aE[i_U08] =
+                            BUTT_STATE_EXT_LONG_PRESS_FLANK_E;
                 }
             }
             break;
@@ -158,7 +164,8 @@ static void calcState(void)
             }
             break;
         case BUTT_STATE_EXT_RELEASED_FLANK_E:
-            if ((butt_state_astr[i_U08].state_E == BUTT_PRESSED_E) && (tiPressed_U16[i_U08] >= BUTT_PRESS_TIME/BUTT_T))
+            if ((butt_state_astr[i_U08].state_E == BUTT_PRESSED_E)
+                    && (tiPressed_U16[i_U08] >= BUTT_PRESS_TIME / BUTT_T))
             {
                 butt_stateExtended_aE[i_U08] = BUTT_STATE_EXT_PRESS_FLANK_E;
             }
@@ -179,8 +186,9 @@ tB Butt_pressedFlank_B(tBUTT_BUTTON_E button_E, tU16 sampleTime_U16)
 {
     tB buttonPressFlank_B = FALSE;
 
-    if ((butt_state_astr[button_E].state_E == BUTT_PRESSED_E) &&
-        ((butt_state_astr[button_E].timeInState_U16 * BUTT_T) < sampleTime_U16))
+    if ((butt_state_astr[button_E].state_E == BUTT_PRESSED_E)
+            && ((butt_state_astr[button_E].timeInState_U16 * BUTT_T)
+                    < sampleTime_U16))
     {
         buttonPressFlank_B = TRUE;
     }

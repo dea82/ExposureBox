@@ -34,6 +34,10 @@
 
 int main(void)
 {
+    /* Check for WDT reset (save code size and assume true) - if a runaway pointer enables it,
+     * then it must be disabled here because it's kept after a reset! Ref. AVR132 chap 2.4. */
+    WDTCR = 0;
+
     Seri_init();
     Spii_init();
     //TODO: Replace with nvmm?

@@ -61,10 +61,7 @@ static void setupPowerMonitor(void)
     /* Disable multiplexer, AIN1 used. */
     SFIOR &= ~(1 << ACME);
 
-    //TODO: This seems to be unnecessary?
-    //ADCSRA &= ~(1 << ADEN); //make sure ADC is OFF
-
-    /* Analog Comparator Bandgap Select */
+    /* Analog Comparator Bandgap Select 1.23 V. */
     ACSR |= (1 << ACBG);
 
     /* Configure interrupt on rising output edge */

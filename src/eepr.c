@@ -63,10 +63,6 @@ tB Eepr_write_B(tU08 *data_paU08, tU16 address_U16, tU08 size_U08)
         ret_B &= (data_paU08[i_U08] == Eepr_readByte_U08(address_U16 + i_U08));
         sprintf(buffer,"Read: %i\n", Eepr_readByte_U08(address_U16 + i_U08));
         Seri_writeString(buffer);
-        if (ret_B)
-        {
-
-        }
     }
     return ret_B;
 }
@@ -168,6 +164,9 @@ static tB write_B(tU16 address_U16, const void *data_ptr, tU08 bytes_U08)
 
 void Eepr_read(void *data_ptr, const tU16 address_U16, tU08 bytes_U08)
 {
+    while (ready_B() == FALSE)
+        ;
+
     chipSelect(SPII_CS_LOW);
     /* Send read command */
     Spii_write(READ);
@@ -184,6 +183,8 @@ void Eepr_read(void *data_ptr, const tU16 address_U16, tU08 bytes_U08)
 
 static void read(tU08 *data_ptr, const tU16 address_U16, tU08 bytes_U08)
 {
+    while (ready_B() == FALSE)
+        ;
     chipSelect(SPII_CS_LOW);
     /* Send read command */
     Spii_write(READ);

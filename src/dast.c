@@ -41,6 +41,11 @@ typedef enum
 
 typedef enum
 {
+    PRIMARY_E, SECONDARY_E
+} tSector_E;
+
+typedef enum
+{
     PRIMARY_TO_SECONDARY_E, SECONDARY_TO_PRIMARY_E
 } tCopyDirection_E;
 
@@ -82,7 +87,7 @@ typedef struct
     tU16 crc_U16;
 } tSettingElements_str;
 
-tVerificationStatus_str verificationStatus_astr[] =
+tDast_VerificationStatus_str verificationStatus_astr[] =
 {
 {/* COUNTERS_E */DAST_UNKNOWN_E, DAST_NONE_E },
 {/* TIMERS_E   */DAST_UNKNOWN_E, DAST_NONE_E },
@@ -149,6 +154,7 @@ typedef const struct
     tU08 nofElements_U08;
 } tMemoryBlock_str;
 
+//TODO: Borde utökas med en pekar till verifieringsstatus.
 tMemoryBlock_str memoryBlock_pastr[] =
 {
 { COUNTER_ADDRESS, counterElementsDef_astr, DAST_NOF_COUNTERS_E + 1 },
@@ -156,17 +162,24 @@ tMemoryBlock_str memoryBlock_pastr[] =
 { SETTINGS_ADDRESS, settingElementsDef_astr, DAST_NOF_SETTINGS_E + 1 } };
 
 static void verifyEeprom(void);
-static void updateCrc(tU16 *crc_pU16, tU08 *data_pU08, tU08 bytes_U08);
-static tVerificationStatus_str verifyMemoryBlock(
+static void updateCrc(tU16 *crc_pU16, void *data_p, tU08 bytes_U08);
+static tDast_VerificationStatus_str verifyMemoryBlock_str(
         tMemoryBlock_str memoryBlock_str);
+static tDast_verificationStatus_E verifyMemoryBlockInSector_E(
+        tMemoryBlock_str memoryBlock_str, tSector_E sector_E);
 static tDast_verificationSolution_E clearMemoryBlock_E(
         tMemoryBlock_str memoryBlock_str);
-static tDast_verificationSolution_E copyMemoryBlock_E(
-        tMemoryBlock_str memoryBlock_str, tCopyDirection_E direction_E);
-static tB syncronizedData_B(tU08 *priData_pU08, tU08 *secData_pU08,
-        tU08 bytes_U08);
-static tB verifyCrc(tU08 priData_pU08[], tU16 crc_U16);
 
+static tU16 getSectorStartAddress_U16(tSector_E sector_E);
+static tB readMemoryBlockToRam(tMemoryBlock_str memoryBlock_str,
+        tSector_E sector_E);
+static tB ramMirrorConsistent_B(tMemoryBlock_str memoryBlock_str);
+static tU16 calcCrcOfRamMirror_U16(tMemoryBlock_str memoryBlock_str);
+static tB writeRamMirrorToSector_B(tMemoryBlock_str memoryBlock_str,
+        tSector_E sector_E);
+static tDast_verificationStatus_E compareRamMirrorWithSector_E(
+        tMemoryBlock_str memoryBlock_str, tSector_E sector_E);
+static tB dataEqual_B(void *priData_p, void *secData_p, tU08 bytes_U08);
 void Dast_init(void)
 {
 #ifdef DEBUG
@@ -179,19 +192,222 @@ static void verifyEeprom(void)
 {
     for (tU08 i_U08 = 0; i_U08 < COUNT(memoryBlock_pastr); i_U08++)
     {
-        Seri_writeString("Verify block\n");
-        verificationStatus_astr[i_U08] = verifyMemoryBlock(
+        Seri_writeString("Verify block\n\n");
+        verificationStatus_astr[i_U08] = verifyMemoryBlock_str(
                 memoryBlock_pastr[i_U08]);
     }
 }
 
+static tDast_VerificationStatus_str verifyMemoryBlock_str(
+        tMemoryBlock_str memoryBlock_str)
+{
+    tDast_VerificationStatus_str memoryBlockStatus_str;
+
+    tDast_verificationStatus_E primarySectorVerificationStatus_E =
+            verifyMemoryBlockInSector_E(memoryBlock_str, PRIMARY_E);
+
+    /* Check if primary sector is healthy. */
+    if (primarySectorVerificationStatus_E == DAST_OK_E)
+    {
+        Seri_writeString("Primary healthy\n");
+        /* Primary sector healthy! */
+        if (compareRamMirrorWithSector_E(memoryBlock_str, SECONDARY_E)
+                == DAST_CORRUPT_E)
+        {
+            Seri_writeString("Secondary corrupt\n");
+            /* Secondary is not up to date with primary, it must be corrupt! */
+            memoryBlockStatus_str.status_E = DAST_CORRUPT_E;
+
+            /* Try to write ram mirror to secondary sector! */
+            if (writeRamMirrorToSector_B(memoryBlock_str, SECONDARY_E) == TRUE)
+            {
+                memoryBlockStatus_str.solution_E = DAST_FIXED_E;
+            }
+            else
+            {
+                memoryBlockStatus_str.solution_E = DAST_UNFIXED_E;
+            }
+        }
+        else
+        {
+            Seri_writeString("Secondary healthy\n");
+            /* Secondary also seems healthy or unknown. */
+            memoryBlockStatus_str.status_E = DAST_OK_E;
+            memoryBlockStatus_str.solution_E = DAST_NONE_E;
+
+        }
+    }
+    else if (primarySectorVerificationStatus_E == DAST_CORRUPT_E)
+    {
+        Seri_writeString("Primary corrupt\n");
+        /* Primary sector corrupt! Try with secondary. */
+        memoryBlockStatus_str.status_E = DAST_CORRUPT_E;
+        tDast_verificationStatus_E secondarySectorVerificationStatus_E =
+                verifyMemoryBlockInSector_E(memoryBlock_str, SECONDARY_E);
+
+        if (secondarySectorVerificationStatus_E == DAST_OK_E)
+        {
+            if (writeRamMirrorToSector_B(memoryBlock_str, PRIMARY_E))
+            {
+                memoryBlockStatus_str.solution_E = DAST_PARTIALLY_LOST_E;
+            }
+            else
+            {
+                memoryBlockStatus_str.solution_E = DAST_UNFIXED_E;
+            }
+        }
+        else if (secondarySectorVerificationStatus_E == DAST_CORRUPT_E)
+        {
+            Seri_writeString("Secondary corrupt");
+            memoryBlockStatus_str.solution_E = DAST_LOST_E;
+            /* Both sectors are corrupt! Clear them both! */
+            clearMemoryBlock_E(memoryBlock_str);
+        }
+    }
+    else
+    {
+        /* Primary sector unknown. Don't try with secondary and use default values! */
+        memoryBlockStatus_str.status_E = DAST_UNKNOWN_E;
+        memoryBlockStatus_str.solution_E = DAST_NONE_E;
+
+    }
+
+    return memoryBlockStatus_str;
+
+}
+
+static tDast_verificationStatus_E compareRamMirrorWithSector_E(
+        tMemoryBlock_str memoryBlock_str, tSector_E sector_E)
+{
+
+    tU16 sectorStartAddress_U16 = getSectorStartAddress_U16(sector_E);
+
+    tU08 buffer_aU08[BYTES_MAX];
+
+    tDast_verificationStatus_E verificationStatus_E = DAST_OK_E;
+
+    for (tU08 i_U08 = 0; i_U08 < memoryBlock_str.nofElements_U08; i_U08++)
+    {
+        //TODO: If read is not possible!?
+        Eepr_read(buffer_aU08,
+                sectorStartAddress_U16 + memoryBlock_str.address_U16
+                        + memoryBlock_str.elements_str[i_U08].offset_U16,
+                memoryBlock_str.elements_str[i_U08].bytes_U08);
+        if (!dataEqual_B(buffer_aU08,
+                memoryBlock_str.elements_str[i_U08].ramMirror_p,
+                memoryBlock_str.elements_str[i_U08].bytes_U08))
+        {
+            verificationStatus_E = DAST_CORRUPT_E;
+        }
+    }
+    return verificationStatus_E;
+}
+
+static tB dataEqual_B(void *priData_p, void *secData_p, tU08 bytes_U08)
+{
+    tB ret_B = TRUE;
+    while (bytes_U08--)
+    {
+        ret_B &= (*(tU08*) priData_p++ == *(tU08*) secData_p++);
+    }
+    return ret_B;
+}
+
+static tB writeRamMirrorToSector_B(tMemoryBlock_str memoryBlock_str,
+        tSector_E sector_E)
+{
+    tB ret_B = TRUE;
+    for (tU08 i_U08 = 0; i_U08 < memoryBlock_str.nofElements_U08; i_U08++)
+    {
+        ret_B &= Eepr_write_B(memoryBlock_str.elements_str[i_U08].ramMirror_p,
+                getSectorStartAddress_U16(sector_E)
+                        + memoryBlock_str.address_U16
+                        + memoryBlock_str.elements_str[i_U08].offset_U16,
+                memoryBlock_str.elements_str[i_U08].bytes_U08);
+    }
+
+    return ret_B;
+}
+
+static tDast_verificationStatus_E verifyMemoryBlockInSector_E(
+        tMemoryBlock_str memoryBlock_str, tSector_E sector_E)
+{
+    tDast_verificationStatus_E verificationStatus_E;
+    if (readMemoryBlockToRam(memoryBlock_str, sector_E) == TRUE)
+    {
+        if (ramMirrorConsistent_B(memoryBlock_str) == TRUE)
+        {
+            verificationStatus_E = DAST_OK_E;
+        }
+        else
+        {
+            verificationStatus_E = DAST_CORRUPT_E;
+        }
+    }
+    else
+    {
+        verificationStatus_E = DAST_UNKNOWN_E;
+    }
+
+    return verificationStatus_E;
+}
+
+static tB ramMirrorConsistent_B(tMemoryBlock_str memoryBlock_str)
+{
+    return (calcCrcOfRamMirror_U16(memoryBlock_str)
+            == *(tU16*) memoryBlock_str.elements_str[memoryBlock_str.nofElements_U08
+                    - 1].ramMirror_p);
+
+}
+
+static tU16 calcCrcOfRamMirror_U16(tMemoryBlock_str memoryBlock_str)
+{
+    tU16 crc_U16 = 0xFFFF;
+
+    for (tU08 i_U08 = 0; i_U08 < (memoryBlock_str.nofElements_U08 - 1); i_U08++)
+    {
+        updateCrc(&crc_U16, memoryBlock_str.elements_str[i_U08].ramMirror_p,
+                memoryBlock_str.elements_str[i_U08].bytes_U08);
+    }
+
+    return crc_U16;
+
+}
+
+static tB readMemoryBlockToRam(tMemoryBlock_str memoryBlock_str,
+        tSector_E sector_E)
+{
+    //TODO: This shall return a boolean. What happens if no communication is possible with eeprom?
+    tB ret_B = TRUE;
+    tU16 sectorStartAddress_U16 = getSectorStartAddress_U16(sector_E);
+
+    for (tU08 i_U08 = 0; i_U08 < memoryBlock_str.nofElements_U08; i_U08++)
+    {
+        Eepr_read(memoryBlock_str.elements_str[i_U08].ramMirror_p,
+                sectorStartAddress_U16 + memoryBlock_str.address_U16
+                        + memoryBlock_str.elements_str[i_U08].offset_U16,
+                memoryBlock_str.elements_str[i_U08].bytes_U08);
+    }
+
+    return ret_B;
+}
+
+static tU16 getSectorStartAddress_U16(tSector_E sector_E)
+{
+    tU16 address_U16;
+    address_U16 = (sector_E == PRIMARY_E) ?
+    PRIMARY_MEM_ADDRESS :
+                                            SECONDARY_MEM_ADDRESS;
+    return address_U16;
+}
+#if 0
 static tVerificationStatus_str verifyMemoryBlock(
         tMemoryBlock_str memoryBlock_str)
 {
     tB syncronizedBlock_B = TRUE;
 
     tVerificationStatus_str verificationStatus_str =
-    { DAST_UNKNOWN_E, DAST_NONE_E };
+    {   DAST_UNKNOWN_E, DAST_NONE_E};
 
     tU16 priCrc_U16 = 0xFFFF;
     tU16 secCrc_U16 = 0xFFFF;
@@ -201,14 +417,22 @@ static tVerificationStatus_str verifyMemoryBlock(
 
     for (tU08 i_U08 = 0; i_U08 < memoryBlock_str.nofElements_U08; i_U08++)
     {
-        Seri_writeString("Element\n");
+
+        //TODO: Borde kunna göra såhär istället:
+
+        // 1. Räkna med att primary sector är ok!
+        // 2. Läs in primary sector till ram.
+        // 3. Beräkna CRC och kontrollera att den är rätt, i så fall är primary sector ok! Gå till 4 annars gå till X.
+        // 4. Läs upp secondary sector och se att den är samma som primary, om inte korrigera!
+        // 5. Om primary var fel men seconda
+
         Eepr_read(priDataBuffer_paU08,
                 PRIMARY_MEM_ADDRESS + memoryBlock_str.address_U16
-                        + memoryBlock_str.elements_str[i_U08].offset_U16,
+                + memoryBlock_str.elements_str[i_U08].offset_U16,
                 memoryBlock_str.elements_str[i_U08].bytes_U08);
         Eepr_read(secDataBuffer_paU08,
                 SECONDARY_MEM_ADDRESS + memoryBlock_str.address_U16
-                        + memoryBlock_str.elements_str[i_U08].offset_U16,
+                + memoryBlock_str.elements_str[i_U08].offset_U16,
                 memoryBlock_str.elements_str[i_U08].bytes_U08);
 
         syncronizedBlock_B &= syncronizedData_B(priDataBuffer_paU08,
@@ -218,7 +442,6 @@ static tVerificationStatus_str verifyMemoryBlock(
         if (i_U08 < memoryBlock_str.nofElements_U08 - 1)
         {
             /* Update CRC */
-            Seri_writeString("Update CRC\n");
             updateCrc(&priCrc_U16, priDataBuffer_paU08,
                     memoryBlock_str.elements_str[i_U08].bytes_U08);
             updateCrc(&secCrc_U16, secDataBuffer_paU08,
@@ -226,38 +449,51 @@ static tVerificationStatus_str verifyMemoryBlock(
         }
         else
         {
-            /* CRC element */
-            if (verifyCrc(priDataBuffer_paU08, priCrc_U16)
-                    && verifyCrc(secDataBuffer_paU08, secCrc_U16)
-                    && syncronizedBlock_B)
+            if (!verifyCrc(priDataBuffer_paU08, priCrc_U16))
             {
-                Seri_writeString("OK\n");
-                verificationStatus_str.status_E = DAST_OK_E;
-                verificationStatus_str.solution_E = DAST_NONE_E;
-            }
-            else if (verifyCrc(priDataBuffer_paU08, priCrc_U16) == FALSE)
-            {
-                Seri_writeString("Primary CRC not ok\n");
+                /* Corrupt primary sector */
                 verificationStatus_str.status_E = DAST_CORRUPT_E;
-                verificationStatus_str.solution_E = clearMemoryBlock_E(
-                        memoryBlock_str);
+                if (verifyCrc(secDataBuffer_paU08, secCrc_U16))
+                {
+                    /* Secondary seems ok, copy secondary to primary! */
+                    Seri_writeString("Primary corrupt secondary ok\n");
+                    verificationStatus_str.solution_E = copyMemoryBlock_E(
+                            memoryBlock_str, SECONDARY_TO_PRIMARY_E);
+                }
+                else
+                {
+                    /* Both sectors corrupt. */
+                    Seri_writeString("Both sectors are corrupt\n");
+                    verificationStatus_str.solution_E = clearMemoryBlock_E(
+                            memoryBlock_str);
+                }
+            }
+            else if (!verifyCrc(secDataBuffer_paU08, secCrc_U16)
+                    || !syncronizedBlock_B)
+            {
+                /* Corrupt secondary sector or difference between blocks. */
+                verificationStatus_str.status_E = DAST_CORRUPT_E;
 
-            }
-            else if (verifyCrc(secDataBuffer_paU08, secCrc_U16) == FALSE)
-            {
-                Seri_writeString("Secondary CRC not ok\n");
-                verificationStatus_str.status_E = DAST_CORRUPT_E;
+                /* Primary is ok (see test above), copy primary to secondary! */
+                Seri_writeString("Primary ok secondary is corrupt\n");
+                verificationStatus_str.solution_E = copyMemoryBlock_E(
+                        memoryBlock_str, PRIMARY_TO_SECONDARY_E);
             }
             else
             {
-                Seri_writeString("Not syncro\n");
-                verificationStatus_str.status_E = DAST_CORRUPT_E;
+                /* Sectors are consistent */
+                Seri_writeString("Sectors are consistent\n");
+                verificationStatus_str.status_E = DAST_OK_E;
+                verificationStatus_str.solution_E = DAST_NONE_E;
             }
         }
     }
+
     return verificationStatus_str;
 }
+#endif
 
+//TODO: Settings block shall not be written zero to, it should be default values?
 static tDast_verificationSolution_E clearMemoryBlock_E(
         tMemoryBlock_str memoryBlock_str)
 {
@@ -325,91 +561,18 @@ static tDast_verificationSolution_E clearMemoryBlock_E(
     return solution_E;
 }
 
-static tDast_verificationSolution_E copyMemoryBlock_E(
-        tMemoryBlock_str memoryBlock_str, tCopyDirection_E direction_E)
-{
-    tDast_verificationSolution_E solution_E;
-    tU16 sourceAddress_U16;
-    tU16 destinationAddress_U16;
-    tU08 buffer_aU08[BYTES_MAX];
-    tB copied_B = TRUE;
-
-    if (direction_E == PRIMARY_TO_SECONDARY_E)
-    {
-        sourceAddress_U16 = PRIMARY_MEM_ADDRESS;
-        destinationAddress_U16 = SECONDARY_MEM_ADDRESS;
-    }
-    else
-    {
-        sourceAddress_U16 = SECONDARY_MEM_ADDRESS;
-        destinationAddress_U16 = PRIMARY_MEM_ADDRESS;
-    }
-
-    for (tU08 i_U08 = 0; i_U08 < memoryBlock_str.nofElements_U08; i_U08++)
-    {
-        Eepr_read(buffer_aU08,
-                sourceAddress_U16 + memoryBlock_str.address_U16
-                        + memoryBlock_str.elements_str[i_U08].offset_U16,
-                memoryBlock_str.elements_str[i_U08].bytes_U08);
-        copied_B &= Eepr_write_B(buffer_aU08,
-                destinationAddress_U16 + memoryBlock_str.address_U16
-                        + memoryBlock_str.elements_str[i_U08].offset_U16,
-                memoryBlock_str.elements_str[i_U08].bytes_U08);
-
-    }
-
-    if (copied_B == TRUE)
-    {
-        if (direction_E == PRIMARY_TO_SECONDARY_E)
-        {
-            solution_E = DAST_FIXED_E;
-        }
-        else
-        {
-            solution_E = DAST_PARTIALLY_LOST_E;
-        }
-    }
-    else
-    {
-        solution_E = DAST_UNFIXED_E;
-    }
-
-    return solution_E;
-}
-
-static tB verifyCrc(tU08 priData_pU08[], tU16 crc_U16)
-{
-    tB ret_B = TRUE;
-    for (tU08 i_U08 = 0; i_U08 < sizeof(crc_U16); i_U08++)
-    {
-        ret_B &= (priData_pU08[i_U08] == ((tU08*) &crc_U16)[i_U08]);
-    }
-    return ret_B;
-}
-
-static tB syncronizedData_B(tU08 *priData_pU08, tU08 *secData_pU08,
-        tU08 bytes_U08)
-{
-    tB ret_B = TRUE;
-    while (bytes_U08--)
-    {
-        ret_B &= (*priData_pU08++ == *secData_pU08++);
-    }
-    return ret_B;
-}
-
-static void updateCrc(tU16 *crc_pU16, tU08 *data_pU08, tU08 bytes_U08)
+static void updateCrc(tU16 *crc_pU16, void *data_p, tU08 bytes_U08)
 {
     while (bytes_U08--)
     {
-        *crc_pU16 = _crc16_update(*crc_pU16, *data_pU08);
+        *crc_pU16 = _crc16_update(*crc_pU16, *(tU08*) data_p++);
     }
 }
 
-tVerificationStatus_str Dast_getVerificationStatus_E(void)
+tDast_VerificationStatus_str Dast_getVerificationStatus_E(void)
 {
-    tVerificationStatus_str verificationStatus_str =
-    { DAST_OK_E, DAST_NONE_E };
+    tDast_VerificationStatus_str verificationStatus_str = {DAST_OK_E, DAST_NONE_E};
+#if 1
     for (tU08 i_U08 = 0; i_U08 < COUNT(verificationStatus_astr); i_U08++)
     {
         if (verificationStatus_astr[i_U08].status_E == DAST_CORRUPT_E)
@@ -417,6 +580,6 @@ tVerificationStatus_str Dast_getVerificationStatus_E(void)
             verificationStatus_str.status_E = DAST_CORRUPT_E;
         }
     }
-
+#endif
     return verificationStatus_str;
 }

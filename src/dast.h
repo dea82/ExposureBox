@@ -54,9 +54,15 @@ typedef struct
 {
     tDast_verificationStatus_E status_E;
     tDast_verificationSolution_E solution_E;
-} tVerificationStatus_str;
+} tDast_VerificationStatus_str;
+
+typedef struct
+{
+    tDast_VerificationStatus_str primary_str;
+    tDast_VerificationStatus_str secondary_str;
+} tDast_MemoryBlockVerStat_str;
 
 void Dast_init(void);
-tVerificationStatus_str Dast_getVerificationStatus_E(void);
+tDast_VerificationStatus_str Dast_getVerificationStatus_E(void);
 
 #endif /* DAST_H_ */

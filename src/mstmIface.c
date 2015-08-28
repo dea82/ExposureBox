@@ -20,6 +20,7 @@
 #include "types.h"
 #include "stmt.h"
 #include "lcdc.h"
+#include "stat.h"
 
 
 /******************************************************************************
@@ -131,8 +132,10 @@ void mstmIface_printStatistics(void)
 
 void mstmIface_printNofStarts(void)
 {
+    tU16 nofStarts_U16 = Stat_getNofStarts_U16();
+
     Menu_clear();
-    Menu_printText(10, LCDC_LINE1, LCDC_LEFT);
+    Menu_printCounterStat(10, nofStarts_U16, LCDC_LINE1, LCDC_LEFT);
     Menu_printButton(9, MENU_BUTTON_RIGHT_E);
 }
 
@@ -163,4 +166,14 @@ void mstmIface_printClearing(void)
 {
     Menu_clear();
     Menu_printText(36, LCDC_LINE1, LCDC_CENTER);
+}
+
+void mstmIface_updateStartsStat(void)
+{
+    Stat_increaseNofStart();
+}
+
+void mstmIface_clearStat(void)
+{
+    Stat_clearStat();
 }

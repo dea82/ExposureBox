@@ -46,6 +46,7 @@ typedef enum {
 	Mstm_main_PowerDown,
 	Mstm_main_PowerDown_PowerDown_PowerDownState,
 	Mstm_main_PowerDown_PowerDown_Recover,
+	Mstm_main_Startup,
 	Mstm_last_state
 } MstmStates;
 

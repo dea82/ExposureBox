@@ -65,4 +65,8 @@ typedef struct
 void Dast_init(void);
 tDast_VerificationStatus_str Dast_getVerificationStatus_E(void);
 
+tU16 Dast_getNofStarts_U16(void);
+void Dast_clearStat(void);
+void Dast_increaseNofStarts(void);
+
 #endif /* DAST_H_ */

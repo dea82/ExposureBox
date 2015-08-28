@@ -19,6 +19,7 @@
 #include "menu.h"
 #include "util.h"
 #include <string.h>
+#include <stdio.h>
 
 #define NOF_EXP_TYPES 4
 /******************************************************************************
@@ -39,7 +40,7 @@ const char PROGMEM string_6[]  = "Start";
 const char PROGMEM string_7[]  = "Settings";
 const char PROGMEM string_8[]  = "Select";
 const char PROGMEM string_9[]  = "Next";
-const char PROGMEM string_10[] = "Starts:";
+const char PROGMEM string_10[] = "Starts";
 const char PROGMEM string_11[] = "Place item";
 const char PROGMEM string_12[] = "OK";
 const char PROGMEM string_13[] = "Exposure";
@@ -157,6 +158,16 @@ void Menu_printSelection(const tU08 textId_U08, const tU08 itemId_U08, const tU0
     strcpy_P(buffer + strlen(buffer), (PGM_P)pgm_read_word(&(string_table[selectableItems[itemId_U08].values[itemNo_U08]])));
 
     Lcdc_writeStringAligned(buffer, LCDC_LINE1, LCDC_LEFT);
+}
+
+void Menu_printCounterStat(const tU08 textId_U08, const tU16 counter_U16, const tLine line, const tAlignment alignment)
+{
+    char buffer[21] = "";
+    strcpy_P(buffer, (PGM_P)pgm_read_word(&(string_table[textId_U08])));
+
+    sprintf(buffer + strlen(buffer), ": %i", counter_U16);
+    Lcdc_writeStringAligned(buffer, line, alignment);
+
 }
 
 void Menu_printTimer(void)

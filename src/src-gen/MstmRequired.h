@@ -36,6 +36,8 @@ This state machine makes use of operations declared in the state machines interf
 	- mstmIface_printClearDone
 	- mstmIface_writeCustomTimer
 	- mstmIface_playToneWarning
+	- mstmIface_updateStartsStat
+	- mstmIface_clearStat
 are defined.
 
 These functions will be called during a 'run to completion step' (runCycle) of the statechart. 
@@ -63,6 +65,8 @@ extern void mstmIface_printClearing();
 extern void mstmIface_printClearDone();
 extern void mstmIface_writeCustomTimer();
 extern void mstmIface_playToneWarning();
+extern void mstmIface_updateStartsStat();
+extern void mstmIface_clearStat();
 
 
 //

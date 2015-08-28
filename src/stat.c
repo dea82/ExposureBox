@@ -36,5 +36,21 @@ void Stat_loop(void)
 
 static tB incCounter_B(tDast_Counters_E counter_E)
 {
+
     return FALSE;
+}
+
+tU16 Stat_getNofStarts_U16(void)
+{
+    return Dast_getNofStarts_U16();
+}
+
+void Stat_increaseNofStart(void)
+{
+    Dast_increaseNofStarts();
+}
+
+void Stat_clearStat(void)
+{
+    Dast_clearStat();
 }

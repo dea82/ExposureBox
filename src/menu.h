@@ -24,5 +24,6 @@ void Menu_printTimer(void);
 void Menu_clear(void);
 tU08 Menu_nofExpTypes(void);
 void Menu_printSelection(const tU08 textId_U08, const tU08 itemId_U08, const tU08 itemNo_U08);
+void Menu_printCounterStat(const tU08 textId_U08, const tU16 counter_U16, const tLine line, const tAlignment alignment);
 
 #endif /* MENU_H_ */

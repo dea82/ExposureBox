@@ -180,6 +180,7 @@ static tB writeRamMirrorToSector_B(tMemoryBlock_str memoryBlock_str,
 static tDast_verificationStatus_E compareRamMirrorWithSector_E(
         tMemoryBlock_str memoryBlock_str, tSector_E sector_E);
 static tB dataEqual_B(void *priData_p, void *secData_p, tU08 bytes_U08);
+static void clearRamMirror(tMemoryBlock_str memoryBlock_str);
 void Dast_init(void)
 {
 #ifdef DEBUG
@@ -400,98 +401,6 @@ static tU16 getSectorStartAddress_U16(tSector_E sector_E)
                                             SECONDARY_MEM_ADDRESS;
     return address_U16;
 }
-#if 0
-static tVerificationStatus_str verifyMemoryBlock(
-        tMemoryBlock_str memoryBlock_str)
-{
-    tB syncronizedBlock_B = TRUE;
-
-    tVerificationStatus_str verificationStatus_str =
-    {   DAST_UNKNOWN_E, DAST_NONE_E};
-
-    tU16 priCrc_U16 = 0xFFFF;
-    tU16 secCrc_U16 = 0xFFFF;
-
-    tU08 priDataBuffer_paU08[BYTES_MAX];
-    tU08 secDataBuffer_paU08[BYTES_MAX];
-
-    for (tU08 i_U08 = 0; i_U08 < memoryBlock_str.nofElements_U08; i_U08++)
-    {
-
-        //TODO: Borde kunna göra såhär istället:
-
-        // 1. Räkna med att primary sector är ok!
-        // 2. Läs in primary sector till ram.
-        // 3. Beräkna CRC och kontrollera att den är rätt, i så fall är primary sector ok! Gå till 4 annars gå till X.
-        // 4. Läs upp secondary sector och se att den är samma som primary, om inte korrigera!
-        // 5. Om primary var fel men seconda
-
-        Eepr_read(priDataBuffer_paU08,
-                PRIMARY_MEM_ADDRESS + memoryBlock_str.address_U16
-                + memoryBlock_str.elements_str[i_U08].offset_U16,
-                memoryBlock_str.elements_str[i_U08].bytes_U08);
-        Eepr_read(secDataBuffer_paU08,
-                SECONDARY_MEM_ADDRESS + memoryBlock_str.address_U16
-                + memoryBlock_str.elements_str[i_U08].offset_U16,
-                memoryBlock_str.elements_str[i_U08].bytes_U08);
-
-        syncronizedBlock_B &= syncronizedData_B(priDataBuffer_paU08,
-                secDataBuffer_paU08,
-                memoryBlock_str.elements_str[i_U08].bytes_U08);
-
-        if (i_U08 < memoryBlock_str.nofElements_U08 - 1)
-        {
-            /* Update CRC */
-            updateCrc(&priCrc_U16, priDataBuffer_paU08,
-                    memoryBlock_str.elements_str[i_U08].bytes_U08);
-            updateCrc(&secCrc_U16, secDataBuffer_paU08,
-                    memoryBlock_str.elements_str[i_U08].bytes_U08);
-        }
-        else
-        {
-            if (!verifyCrc(priDataBuffer_paU08, priCrc_U16))
-            {
-                /* Corrupt primary sector */
-                verificationStatus_str.status_E = DAST_CORRUPT_E;
-                if (verifyCrc(secDataBuffer_paU08, secCrc_U16))
-                {
-                    /* Secondary seems ok, copy secondary to primary! */
-                    Seri_writeString("Primary corrupt secondary ok\n");
-                    verificationStatus_str.solution_E = copyMemoryBlock_E(
-                            memoryBlock_str, SECONDARY_TO_PRIMARY_E);
-                }
-                else
-                {
-                    /* Both sectors corrupt. */
-                    Seri_writeString("Both sectors are corrupt\n");
-                    verificationStatus_str.solution_E = clearMemoryBlock_E(
-                            memoryBlock_str);
-                }
-            }
-            else if (!verifyCrc(secDataBuffer_paU08, secCrc_U16)
-                    || !syncronizedBlock_B)
-            {
-                /* Corrupt secondary sector or difference between blocks. */
-                verificationStatus_str.status_E = DAST_CORRUPT_E;
-
-                /* Primary is ok (see test above), copy primary to secondary! */
-                Seri_writeString("Primary ok secondary is corrupt\n");
-                verificationStatus_str.solution_E = copyMemoryBlock_E(
-                        memoryBlock_str, PRIMARY_TO_SECONDARY_E);
-            }
-            else
-            {
-                /* Sectors are consistent */
-                Seri_writeString("Sectors are consistent\n");
-                verificationStatus_str.status_E = DAST_OK_E;
-                verificationStatus_str.solution_E = DAST_NONE_E;
-            }
-        }
-    }
-
-    return verificationStatus_str;
-}
-#endif
 
 //TODO: Settings block shall not be written zero to, it should be default values?
 static tDast_verificationSolution_E clearMemoryBlock_E(
@@ -503,6 +412,8 @@ static tDast_verificationSolution_E clearMemoryBlock_E(
     tB cleared_B = TRUE;
     tU08 buffer_aU08[BYTES_MAX] =
     { 0, 0, 0, 0 };
+
+    //TODO: Borde skrivas om så att ram-spegeln nollas och därefter skriver man ner hela den!
 
     for (tU08 i_U08 = 0; i_U08 < memoryBlock_str.nofElements_U08; i_U08++)
     {
@@ -571,8 +482,9 @@ static void updateCrc(tU16 *crc_pU16, void *data_p, tU08 bytes_U08)
 
 tDast_VerificationStatus_str Dast_getVerificationStatus_E(void)
 {
-    tDast_VerificationStatus_str verificationStatus_str = {DAST_OK_E, DAST_NONE_E};
-#if 1
+    tDast_VerificationStatus_str verificationStatus_str =
+    { DAST_OK_E, DAST_NONE_E };
+
     for (tU08 i_U08 = 0; i_U08 < COUNT(verificationStatus_astr); i_U08++)
     {
         if (verificationStatus_astr[i_U08].status_E == DAST_CORRUPT_E)
@@ -580,6 +492,77 @@ tDast_VerificationStatus_str Dast_getVerificationStatus_E(void)
             verificationStatus_str.status_E = DAST_CORRUPT_E;
         }
     }
-#endif
+
     return verificationStatus_str;
+}
+
+tU16 Dast_getNofStarts_U16(void)
+{
+    return counterRamMirror_str.starts_U16;
+}
+
+void Dast_increaseNofStarts(void)
+{
+    tU16 crc_U16;
+
+    INC_U16(counterRamMirror_str.starts_U16);
+    crc_U16 = calcCrcOfRamMirror_U16(memoryBlock_pastr[COUNTERS_E]);
+    *(tU16*) memoryBlock_pastr[COUNTERS_E].elements_str[memoryBlock_pastr[COUNTERS_E].nofElements_U08
+            - 1].ramMirror_p = crc_U16;
+
+    Eepr_write_B(
+            memoryBlock_pastr[COUNTERS_E].elements_str[DAST_STARTS_E].ramMirror_p,
+            PRIMARY_MEM_ADDRESS + memoryBlock_pastr[COUNTERS_E].address_U16
+                    + memoryBlock_pastr[COUNTERS_E].elements_str[DAST_STARTS_E].offset_U16,
+            memoryBlock_pastr[COUNTERS_E].elements_str[DAST_STARTS_E].bytes_U08);
+
+    Eepr_write_B(
+            memoryBlock_pastr[COUNTERS_E].elements_str[DAST_NOF_COUNTERS_E].ramMirror_p,
+            PRIMARY_MEM_ADDRESS + memoryBlock_pastr[COUNTERS_E].address_U16
+                    + memoryBlock_pastr[COUNTERS_E].elements_str[memoryBlock_pastr[COUNTERS_E].nofElements_U08
+                            - 1].offset_U16,
+            memoryBlock_pastr[COUNTERS_E].elements_str[memoryBlock_pastr[COUNTERS_E].nofElements_U08
+                    - 1].bytes_U08);
+
+    Eepr_write_B(
+            memoryBlock_pastr[COUNTERS_E].elements_str[DAST_STARTS_E].ramMirror_p,
+            SECONDARY_MEM_ADDRESS + memoryBlock_pastr[COUNTERS_E].address_U16
+                    + memoryBlock_pastr[COUNTERS_E].elements_str[DAST_STARTS_E].offset_U16,
+            memoryBlock_pastr[COUNTERS_E].elements_str[DAST_STARTS_E].bytes_U08);
+
+    Eepr_write_B(
+            memoryBlock_pastr[COUNTERS_E].elements_str[DAST_NOF_COUNTERS_E].ramMirror_p,
+            SECONDARY_MEM_ADDRESS + memoryBlock_pastr[COUNTERS_E].address_U16
+                    + memoryBlock_pastr[COUNTERS_E].elements_str[memoryBlock_pastr[COUNTERS_E].nofElements_U08
+                            - 1].offset_U16,
+            memoryBlock_pastr[COUNTERS_E].elements_str[memoryBlock_pastr[COUNTERS_E].nofElements_U08
+                    - 1].bytes_U08);
+}
+
+void Dast_clearStat(void)
+{
+    clearRamMirror(memoryBlock_pastr[COUNTERS_E]);
+    writeRamMirrorToSector_B(memoryBlock_pastr[COUNTERS_E], PRIMARY_E);
+    writeRamMirrorToSector_B(memoryBlock_pastr[COUNTERS_E], SECONDARY_E);
+    clearRamMirror(memoryBlock_pastr[TIMERS_E]);
+    writeRamMirrorToSector_B(memoryBlock_pastr[TIMERS_E], PRIMARY_E);
+    writeRamMirrorToSector_B(memoryBlock_pastr[TIMERS_E], SECONDARY_E);
+}
+
+static void clearRamMirror(tMemoryBlock_str memoryBlock_str)
+{
+    tU08 bytes_U08;
+    tU08 * ramAddr_U08;
+
+    for (tU08 i_U08 = 0; i_U08 < (memoryBlock_str.nofElements_U08 - 1); i_U08++)
+    {
+        bytes_U08 = memoryBlock_str.elements_str[i_U08].bytes_U08;
+        ramAddr_U08 = (tU08*) memoryBlock_str.elements_str[i_U08].ramMirror_p;
+        while (bytes_U08--)
+        {
+            *ramAddr_U08++ = 0;
+        }
+    }
+    *(tU16*) memoryBlock_str.elements_str[memoryBlock_str.nofElements_U08 - 1].ramMirror_p =
+            calcCrcOfRamMirror_U16(memoryBlock_str);
 }

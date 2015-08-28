@@ -43,6 +43,7 @@ static void mstm_react_main_NormalFunction_NormalFunction_Settings_Settings_Clea
 static void mstm_react_main_UserAbsence(Mstm* handle);
 static void mstm_react_main_PowerDown_PowerDown_PowerDownState(Mstm* handle);
 static void mstm_react_main_PowerDown_PowerDown_Recover(Mstm* handle);
+static void mstm_react_main_Startup(Mstm* handle);
 static void mstm_clearInEvents(Mstm* handle);
 static void mstm_clearOutEvents(Mstm* handle);
 
@@ -279,6 +280,12 @@ void mstm_exit(Mstm* handle)
 			mstm_unsetTimer(handle, (sc_eventid) &(handle->timeEvents.mstm_main_PowerDown_PowerDown_Recover_tev0_raised) );		
 			break;
 		}
+		case Mstm_main_Startup : {
+			/* Default exit sequence for state Startup */
+			handle->stateConfVector[1] = Mstm_last_state;
+			handle->stateConfVectorPosition = 1;
+			break;
+		}
 		default: break;
 	}
 	mstm_exact_SequenceImpl(handle);
@@ -420,6 +427,10 @@ void mstm_runCycle(Mstm* handle) {
 			mstm_react_main_PowerDown_PowerDown_Recover(handle);
 			break;
 		}
+		case Mstm_main_Startup : {
+			mstm_react_main_Startup(handle);
+			break;
+		}
 		default:
 			break;
 		}
@@ -535,6 +546,9 @@ sc_boolean mstm_isActive(Mstm* handle, MstmStates state) {
 			);
 		case Mstm_main_PowerDown_PowerDown_Recover : 
 			return (sc_boolean) (handle->stateConfVector[1] == Mstm_main_PowerDown_PowerDown_Recover
+			);
+		case Mstm_main_Startup : 
+			return (sc_boolean) (handle->stateConfVector[1] == Mstm_main_Startup
 			);
 		default: return bool_false;
 	}
@@ -902,6 +916,7 @@ static void mstm_dhenseq_main_NormalFunction_NormalFunction_Settings_Settings_Cl
 			/* Entry action for state 'Clearing'. */
 			mstm_setTimer(handle, (sc_eventid) &(handle->timeEvents.mstm_main_NormalFunction_NormalFunction_Settings_Settings_Clear_r1_Clearing_tev0_raised) , 3 * 1000, bool_false);
 			mstmIface_printClearing();
+			mstmIface_clearStat();
 			handle->stateConfVector[1] = Mstm_main_NormalFunction_NormalFunction_Settings_Settings_Clear_r1_Clearing;
 			handle->stateConfVectorPosition = 1;
 			handle->historyVector[3] = handle->stateConfVector[1];
@@ -1021,15 +1036,11 @@ static void mstm_react_main_EEpromVerifiedOk(Mstm* handle) {
 		handle->stateConfVectorPosition = 1;
 		/* Exit action for state 'EEpromVerifiedOk'. */
 		mstm_unsetTimer(handle, (sc_eventid) &(handle->timeEvents.mstm_main_EEpromVerifiedOk_tev0_raised) );		
-		/* 'default' enter sequence for state NormalFunction */
-		/* 'default' enter sequence for region NormalFunction */
-		/* Default react sequence for initial entry  */
-		/* 'default' enter sequence for state StartScreen */
-		/* Entry action for state 'StartScreen'. */
-		mstmIface_printStartScreen();
-		handle->stateConfVector[1] = Mstm_main_NormalFunction_NormalFunction_StartScreen;
+		/* 'default' enter sequence for state Startup */
+		/* Entry action for state 'Startup'. */
+		mstmIface_updateStartsStat();
+		handle->stateConfVector[1] = Mstm_main_Startup;
 		handle->stateConfVectorPosition = 1;
-		handle->historyVector[0] = handle->stateConfVector[1];
 	}  else {
 		if (handle->iface.leftButtonPressed_raised || handle->iface.rightButtonPressed_raised) { 
 			/* Default exit sequence for state EEpromVerifiedOk */
@@ -1037,15 +1048,11 @@ static void mstm_react_main_EEpromVerifiedOk(Mstm* handle) {
 			handle->stateConfVectorPosition = 1;
 			/* Exit action for state 'EEpromVerifiedOk'. */
 			mstm_unsetTimer(handle, (sc_eventid) &(handle->timeEvents.mstm_main_EEpromVerifiedOk_tev0_raised) );		
-			/* 'default' enter sequence for state NormalFunction */
-			/* 'default' enter sequence for region NormalFunction */
-			/* Default react sequence for initial entry  */
-			/* 'default' enter sequence for state StartScreen */
-			/* Entry action for state 'StartScreen'. */
-			mstmIface_printStartScreen();
-			handle->stateConfVector[1] = Mstm_main_NormalFunction_NormalFunction_StartScreen;
+			/* 'default' enter sequence for state Startup */
+			/* Entry action for state 'Startup'. */
+			mstmIface_updateStartsStat();
+			handle->stateConfVector[1] = Mstm_main_Startup;
 			handle->stateConfVectorPosition = 1;
-			handle->historyVector[0] = handle->stateConfVector[1];
 		} 
 	}
 }
@@ -1057,15 +1064,11 @@ static void mstm_react_main_EEpromVerifiedCorrupt(Mstm* handle) {
 		/* Default exit sequence for state EEpromVerifiedCorrupt */
 		handle->stateConfVector[1] = Mstm_last_state;
 		handle->stateConfVectorPosition = 1;
-		/* 'default' enter sequence for state NormalFunction */
-		/* 'default' enter sequence for region NormalFunction */
-		/* Default react sequence for initial entry  */
-		/* 'default' enter sequence for state StartScreen */
-		/* Entry action for state 'StartScreen'. */
-		mstmIface_printStartScreen();
-		handle->stateConfVector[1] = Mstm_main_NormalFunction_NormalFunction_StartScreen;
+		/* 'default' enter sequence for state Startup */
+		/* Entry action for state 'Startup'. */
+		mstmIface_updateStartsStat();
+		handle->stateConfVector[1] = Mstm_main_Startup;
 		handle->stateConfVectorPosition = 1;
-		handle->historyVector[0] = handle->stateConfVector[1];
 	} 
 }
 
@@ -5943,6 +5946,7 @@ static void mstm_react_main_NormalFunction_NormalFunction_Settings_Settings_Clea
 					/* Entry action for state 'Clearing'. */
 					mstm_setTimer(handle, (sc_eventid) &(handle->timeEvents.mstm_main_NormalFunction_NormalFunction_Settings_Settings_Clear_r1_Clearing_tev0_raised) , 3 * 1000, bool_false);
 					mstmIface_printClearing();
+					mstmIface_clearStat();
 					handle->stateConfVector[1] = Mstm_main_NormalFunction_NormalFunction_Settings_Settings_Clear_r1_Clearing;
 					handle->stateConfVectorPosition = 1;
 					handle->historyVector[3] = handle->stateConfVector[1];
@@ -6667,6 +6671,23 @@ static void mstm_react_main_PowerDown_PowerDown_Recover(Mstm* handle) {
 			handle->stateConfVectorPosition = 1;
 		} 
 	}
+}
+
+/* The reactions of state Startup. */
+static void mstm_react_main_Startup(Mstm* handle) {
+	/* The reactions of state Startup. */
+	/* Default exit sequence for state Startup */
+	handle->stateConfVector[1] = Mstm_last_state;
+	handle->stateConfVectorPosition = 1;
+	/* 'default' enter sequence for state NormalFunction */
+	/* 'default' enter sequence for region NormalFunction */
+	/* Default react sequence for initial entry  */
+	/* 'default' enter sequence for state StartScreen */
+	/* Entry action for state 'StartScreen'. */
+	mstmIface_printStartScreen();
+	handle->stateConfVector[1] = Mstm_main_NormalFunction_NormalFunction_StartScreen;
+	handle->stateConfVectorPosition = 1;
+	handle->historyVector[0] = handle->stateConfVector[1];
 }
 
 

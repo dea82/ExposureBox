@@ -9,5 +9,5 @@
 #include "sett.h"
 #include "types.h"
 
-tSett_SettingsSection_str sett_str;
+
 

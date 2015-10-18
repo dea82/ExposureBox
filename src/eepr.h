@@ -37,6 +37,9 @@ tB Eepr_writeByte_B(tU16 address_U16, tU08 data_U08);
 tB Eepr_writeInt_B(tU16 address_U16, tU16 data_U16);
 tB Eepr_writeLong_B(tU16 address_U16, tU32 data_U32);
 
+tB Eepr_read_B(tU08 *data_pU08, const tU16 address_U16, tU08 bytes_U08);
+tB Eepr_update_B(tU08 *data_pU08, const tU16 address_U16, tU08 bytes_U08);
+
 tU08 Eepr_readByte_U08(tU16 address_U16);
 tU16 Eepr_readInt_U16(tU16 address_U16);
 tU32 Eepr_readLong_U32(tU16 address_U16);

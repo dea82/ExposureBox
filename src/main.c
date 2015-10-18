@@ -27,9 +27,8 @@
 #include "sche.h"
 #include "colo.h"
 #include "buzz.h"
-#include "dast.h"
-
 #include <util/delay.h>
+#include "dast.h"
 
 
 int main(void)
@@ -50,7 +49,7 @@ int main(void)
     Colo_init();
     Sche_init();
     Buzz_init();
-    Dast_init();
+
 
     Sche_addTask(0, Butt_loop,  BUTT_T);
     Sche_addTask(1, Ledc_10ms, 10);

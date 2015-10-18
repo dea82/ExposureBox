@@ -16,14 +16,9 @@
 /* Serial communication */
 #define BAUD_RATE 9600
 
-/*************************************************
- * EEPROM STRUCTURE
- *************************************************/
-/* All data in the EEPROM is mirrored. There are three sections:
- * - Shutdown section, which can be written to at shutdown. Time critical, has it's own CRC.
- * - Usage data.
- * - Settings
- */
+/* Data storage config */
+#define PRI_SECTOR_START_ADDR 0x0
+#define SEC_SECTOR_START_ADDR AT25256_MEM_SIZE_BYTE/2
 
 /* ATTENTION: If the EEPROM structure is changed in any way increment this counter!!! */
 #define SW_VERSION "DEV"

@@ -12,16 +12,16 @@
  *          -
  */
 
-#include "dast.h"
 #include "stat.h"
-#include "types.h"
-#include "dast.h"
 
-static tB incCounter_B(tDast_Counters_E counter_E);
+#include "dast.h"
+#include "types.h"
+
+static tB incCounter_B(tStat_Counters_E counter_E);
 
 tB Stat_incStarts(void)
 {
-    return incCounter_B(DAST_STARTS_E);
+    return incCounter_B(STAT_STARTS_E);
 }
 
 void Stat_init(void)
@@ -34,23 +34,13 @@ void Stat_loop(void)
     //TODO: Updater timers.
 }
 
-static tB incCounter_B(tDast_Counters_E counter_E)
+static tB incCounter_B(tStat_Counters_E counter_E)
 {
 
     return FALSE;
 }
 
-tU16 Stat_getNofStarts_U16(void)
-{
-    return Dast_getNofStarts_U16();
-}
-
-void Stat_increaseNofStart(void)
-{
-    Dast_increaseNofStarts();
-}
-
 void Stat_clearStat(void)
 {
-    Dast_clearStat();
+
 }

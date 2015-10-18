@@ -58,10 +58,10 @@ tB Eepr_write_B(tU08 *data_paU08, tU16 address_U16, tU08 size_U08)
 
     for (tU08 i_U08 = 0; i_U08 < size_U08; i_U08++)
     {
-        sprintf(buffer,"Data: %i\n", data_paU08[i_U08]);
+        sprintf(buffer, "Data: %i\n", data_paU08[i_U08]);
         Seri_writeString(buffer);
         ret_B &= (data_paU08[i_U08] == Eepr_readByte_U08(address_U16 + i_U08));
-        sprintf(buffer,"Read: %i\n", Eepr_readByte_U08(address_U16 + i_U08));
+        sprintf(buffer, "Read: %i\n", Eepr_readByte_U08(address_U16 + i_U08));
         Seri_writeString(buffer);
     }
     return ret_B;
@@ -179,6 +179,36 @@ void Eepr_read(void *data_ptr, const tU16 address_U16, tU08 bytes_U08)
         *(tU08*) data_ptr++ = Spii_getByte_U08();
     }
     chipSelect(SPII_CS_HIGH);
+}
+
+tB Eepr_read_B(tU08 *data_pU08, const tU16 address_U16, tU08 bytes_U08)
+{
+    while (ready_B() == FALSE)
+        ;
+
+    chipSelect(SPII_CS_LOW);
+    /* Send read command */
+    Spii_write(READ);
+    /* Send high and low nibble of address */
+    Spii_write(HI_BYTE(address_U16));
+    Spii_write(LO_BYTE(address_U16));
+    /* Get the data at the address */
+    while (bytes_U08--)
+    {
+        *data_pU08++ = Spii_getByte_U08();
+    }
+    chipSelect(SPII_CS_HIGH);
+    //TODO: Implement logic for comm. error.
+    return TRUE;
+}
+
+tB Eepr_update_B(tU08 *data_pU08, const tU16 address_U16, tU08 bytes_U08)
+{
+    while (ready_B() == FALSE)
+        ;
+
+    //TODO: Implement!
+    return FALSE;
 }
 
 static void read(tU08 *data_ptr, const tU16 address_U16, tU08 bytes_U08)

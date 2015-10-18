@@ -132,7 +132,7 @@ void mstmIface_printStatistics(void)
 
 void mstmIface_printNofStarts(void)
 {
-    tU16 nofStarts_U16 = Stat_getNofStarts_U16();
+    tU16 nofStarts_U16 = 0;//Stat_getNofStarts_U16();
 
     Menu_clear();
     Menu_printCounterStat(10, nofStarts_U16, LCDC_LINE1, LCDC_LEFT);
@@ -170,10 +170,10 @@ void mstmIface_printClearing(void)
 
 void mstmIface_updateStartsStat(void)
 {
-    Stat_increaseNofStart();
+    //Stat_increaseNofStart();
 }
 
 void mstmIface_clearStat(void)
 {
-    Stat_clearStat();
+    //Stat_clearStat_B();
 }

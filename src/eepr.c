@@ -52,6 +52,10 @@ static void chipSelect(csState_t state)
 
 tB Eepr_write_B(tU08 *data_paU08, tU16 address_U16, tU08 size_U08)
 {
+    if(size_U08 > 64)
+    {
+        return FALSE;
+    }
     char buffer[20] = "";
 
     tB ret_B = write_B(address_U16, data_paU08, size_U08);

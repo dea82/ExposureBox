@@ -24,6 +24,7 @@ C_SRCS += \
 ../spii.c \
 ../stat.c \
 ../stmt.c \
+../such.c \
 ../util.c 
 
 OBJS += \
@@ -47,6 +48,7 @@ OBJS += \
 ./spii.o \
 ./stat.o \
 ./stmt.o \
+./such.o \
 ./util.o 
 
 C_DEPS += \
@@ -70,6 +72,7 @@ C_DEPS += \
 ./spii.d \
 ./stat.d \
 ./stmt.d \
+./such.d \
 ./util.d 
 
 

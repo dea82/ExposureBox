@@ -8,7 +8,7 @@
 #ifndef STMT_H_
 #define STMT_H_
 
-#include "src-gen/mstm.h"
+#include "src-gen/Mmstm.h"
 
 typedef void (*raiseEventCallback_t)(Mstm* handle, sc_eventid evid);
 

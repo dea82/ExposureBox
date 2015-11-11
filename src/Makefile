@@ -95,7 +95,7 @@ EXTRAINCDIRS =
 CSTANDARD = -std=gnu99
 
 # Place -D or -U options here
-CDEFS =
+CDEFS = -DF_CPU=$(F_CPU)
 
 # Place -I options here
 CINCS =

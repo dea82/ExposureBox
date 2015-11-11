@@ -15,7 +15,7 @@
  * Header files
  *****************************************************************************/
 #include "src-gen/sc_types.h"
-#include "src-gen/mstm.h"
+#include "src-gen/Mstm.h"
 #include "menu.h"
 #include "types.h"
 #include "stmt.h"
